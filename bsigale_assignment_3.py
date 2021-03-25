@@ -21,23 +21,26 @@ def hawkid():
 ###################################################################### 
 def printFeatureClassNames(workspace):
 	
-	## updates the workspace to the workspace given by the user
-	try:
-		arcpy.env.workspace = workspace
-	except:
-		print("Workspace format invalid.")
-	
-	## get list of feature classes in the workspace.
-	try:
-		fcList = arcpy.ListFeatureClasses()
-	except:
-		print("Feature Class error.")
-    
+    ## updates the workspace to the workspace given by the user
+    try:
+        arcpy.env.workspace = workspace
+        ## get list of feature classes in the workspace.
+	fcList = arcpy.ListFeatureClasses()
 	## loop through the feature classes in fcList, describe the object, and print the shapetype
 	## using .format for ease of use.
-    for fc in fcList:
-        geom_type = arcpy.Describe(fc).shapeType
-        print("{0} is a {1} feature class".format(fc, geom_type))
+	for fc in fcList:
+            geom_type = arcpy.Describe(fc).shapeType
+            print("{0} is a {1} feature class".format(fc, geom_type))
+
+    ## Return geoprocessing specific errors
+    except arcpy.ExecuteError:
+        arcpy.AddError(arcpy.GetMessages(2))
+
+    # Return any other type of error
+    except:
+        # By default any other errors will be caught here
+        e = sys.exc_info()[1]
+        print(e.args[0])
 
 ###################################################################### 
 # Problem 2 (20 Points)
@@ -48,23 +51,27 @@ def printFeatureClassNames(workspace):
 
 ###################################################################### 
 def printNumericalFieldNames(inputFc, workspace):
-    
-	## updates the workspace to the workspace given by the user
-	try:
-		arcpy.env.workspace = workspace
-	except:
-		print("Workspace invalid.")
-	
-	## lists fields for the user-specified feature class in the workspace.
     try:
-		fieldlist = arcpy.ListFields(inputFc)
-	except:
-		print("Feature Class input is invalid")
+        ## updates the workspace to the workspace given by the user
+        arcpy.env.workspace = workspace
 
-    numberList = ['Double', 'Integer', 'SmallInteger', 'Single']
-    for field in fieldlist:
-        if field.type in numberList:
-            print(field.name, field.type)
+        ## lists fields for the user-specified feature class in the workspace.
+        fieldlist = arcpy.ListFields(inputFc)
+
+        numberList = ['Double', 'Integer', 'SmallInteger', 'Single']
+        for field in fieldlist:
+            if field.type in numberList:
+                print(field.name, field.type)
+
+    # Return geoprocessing specific errors
+    except arcpy.ExecuteError:
+        arcpy.AddError(arcpy.GetMessages(2))
+
+    # Return any other type of error
+    except:
+        # By default any other errors will be caught here
+        e = sys.exc_info()[1]
+        print(e.args[0])
 
 ###################################################################### 
 # Problem 3 (30 Points)
@@ -74,45 +81,45 @@ def printNumericalFieldNames(inputFc, workspace):
 
 ###################################################################### 
 def exportFeatureClassesByShapeType(input_geodatabase, shapeType, output_geodatabase):
-    
-	##store the current environment so it can be reset later
-    original_env = str(arcpy.env.workspace)
-    print("Current Workspace: " + arcpy.env.workspace)
-    print("Beginning Database Creation")
-    
-	##try to create the new geodatabase
     try:
-		arcpy.management.CreateFileGDB(arcpy.env.workspace, output_geodatabase)
-	except:
-		print("Database creation error!")
+        ##store the current environment so it can be reset later
+        original_env = str(arcpy.env.workspace)
+        print("Current Workspace: " + arcpy.env.workspace)
+        print("Beginning Database Creation")
+	##create the new geodatabase
+        arcpy.management.CreateFileGDB(arcpy.env.workspace, output_geodatabase)
 
-	##try to update the current geodatabase using the user input
-    try:
-		arcpy.env.workspace = input_geodatabase
-	except:
-		print("Workspace update error")
-		
-    print("Current Workspace: " + arcpy.env.workspace)
+        ##try to update the current geodatabase using the user input
+        arcpy.env.workspace = input_geodatabase
+        print("Current Workspace: " + arcpy.env.workspace)
 
-	## get list of feature classes in the workspace.
-	try:
-		fcList = arcpy.ListFeatureClasses()
-	except:
-		print("Feature Class error.")
-		
+        ## get list of feature classes in the workspace.
+        fcList = arcpy.ListFeatureClasses()
+
 	##loop through the list of feature classes and describe each one. If it matches
 	##the user-specified shape type, copy it into the newly created database.
-    for fc in fcList:
-        geom_type = arcpy.Describe(fc).shapeType
-        if geom_type == shapeType:
-            outFeatureClass = os.path.join(output_geodatabase, fc.strip(".shp"))
-            arcpy.CopyFeatures_management(fc, outFeatureClass)
-            print("--- Created copy of: " + fc + " located at: " + outFeatureClass)
-    
-	##resets the workspace
-    arcpy.env.workspace = original_env
-    print("Copy Complete")
-    print("Current Workspace: " + arcpy.env.workspace)
+        for fc in fcList:
+            geom_type = arcpy.Describe(fc).shapeType
+            if geom_type == shapeType:
+                outFeatureClass = os.path.join(output_geodatabase, fc.strip(".shp"))
+                arcpy.CopyFeatures_management(fc, outFeatureClass)
+                print("--- Created copy of: " + fc + " located at: " + outFeatureClass)
+
+        ##resets the workspace
+	arcpy.env.workspace = original_env
+        print("Copy Complete")
+        print("Current Workspace: " + arcpy.env.workspace)
+
+    # Return geoprocessing specific errors
+    except arcpy.ExecuteError:
+        arcpy.AddError(arcpy.GetMessages(2))
+
+    # Return any other type of error
+    except:
+        # By default any other errors will be caught here
+        e = sys.exc_info()[1]
+        print(e.args[0])
+
 
 ###################################################################### 
 # Problem 4 (40 Points)
@@ -123,31 +130,37 @@ def exportFeatureClassesByShapeType(input_geodatabase, shapeType, output_geodata
 
 ###################################################################### 
 def exportAttributeJoin(inputFc, idFieldInputFc, inputTable, idFieldTable, workspace):
-    
-	## updates the workspace to the workspace given by the user
-	try:
-		arcpy.env.workspace = workspace
-	except:
-		print("Workspace invalid.")
-		
-	##sets the output table name.
-    outName = inputFc + "_" + inputTable + "_JoinOn_" + idFieldInputFc
-    
-	##tries to creat a table with the join
     try:
-		joined = arcpy.AddJoin_management(inputFc, idFieldInputFc, inputTable, idFieldTable)
-    except:
-		print("Issue with join. Check table names and field names.")
-	
-	##tries to copy the newly joined table into the workspace.
-    arcpy.CopyFeatures_management(joined, outName)
-    
-	##prints the number of records successfully joined into the 
-	##table as well as the number of rows in the original tables..
-    print("Rows Matched: " + str(arcpy.management.GetCount(joined)))
-	print("Input Feature Class Rows: " + str(arcpy.management.GetCount(inputFc)))
-    print("Input Table Rows: " + str(arcpy.management.GetCount(inputTable)))
+        ## updates the workspace to the workspace given by the user
+        arcpy.env.workspace = workspace
 
+        ##sets the output table name.
+        outName = inputFc + "_" + inputTable + "_JoinOn_" + idFieldInputFc
+
+        ##creates a table with the join
+        joined = arcpy.AddJoin_management(inputFc, idFieldInputFc, inputTable, idFieldTable, 'KEEP_COMMON')
+
+        ##copies the newly joined table into the workspace.
+        arcpy.CopyFeatures_management(joined, outName)
+
+        ## Get Row Counts
+        joinedCount = int(arcpy.management.GetCount('joined').getOutput(0))
+        unJoinedCount = int(arcpy.management.GetCount('inputFc').getOutput(0)) - joinedCount
+
+        ##prints the number of records successfully joined into the
+        ##table as well as the number of rows in the original tables.
+        print("Rows Matched: " + joinedCount)
+        print("Rows Unmatched: " + unJoinedCount)
+
+	# Return geoprocessing specific errors
+        except arcpy.ExecuteError:
+            arcpy.AddError(arcpy.GetMessages(2))
+
+        # Return any other type of error
+        except:
+            # By default any other errors will be caught here
+            e = sys.exc_info()[1]
+            print(e.args[0])
 
 ######################################################################
 # MAKE NO CHANGES BEYOND THIS POINT.
