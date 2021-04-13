@@ -1,0 +1,15 @@
+Step,PointsAvailable,Score,Feedback
+1.1,8,6,Make sure indentations are correct. Set the workspace and use list feature classes.Loop through the list and use describe object to get the shape type. Print each feature class name with shape type.
+1.2,1,1,
+1.3,1,0,The code does not work or produce the expected result.
+2.1,16,12,Make sure indentations are correct. Set the workspace and use list fields for the given feature class. Loop through the list of fields and check if the field type is numeric (e.g. Double; Float; Integer; Long; Short). Print each field name with numeric type.
+2.2,2,2,
+2.3,2,0,The code does not work or produce the expected result.
+3.1,24,12,Make sure indentations are correct. Set the workspace to input geodatabase. Find the directory path and create the output geodatabase. Create a list of feature classes and loop through the list and Use describe function to check for feature classes with the given shape type. Copy the feature classes with the given shape type into the new geodatabase.
+3.2,3,3,
+3.3,3,0,The code does not work or produce the expected result.
+4.1,32,24,Make sure indentations are correct. Set the workspace to input geodatabase. Use join function in management package using the fifth parameter as KEEP_COMMON. Use copy features management to copy the join output to a new feature class and remove join. Use get count management function to count the records from the joined table (matched records) as well as records in the original table or feature class to be joined (all records). Print the matched and unmatched records (all records  matched records).
+4.2,4,3,
+4.3,4,0,The code does not work or produce the expected result.
+Total Points,100,63,
+,,You have major indentation errors in your code. Please review indentation in Python. Without the correct indentation the semantics of your code is also  impacted. In problem 3 you cannot save .shp format into a geodatabase. You are also missing the creation of the new geodatabase (output_geodatabase).,
