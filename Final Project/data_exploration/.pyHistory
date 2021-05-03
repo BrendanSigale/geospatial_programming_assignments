@@ -1,8 +1,0 @@
-﻿import arcpy
-fields = arcpy.ListFields('CDC_SVI_2014_TxLaMsAr')
-print(len(fields)
-print(len(fields))
-fields = arcpy.ListFields('USGS_Harvey_HWM_Peaks')
-print(len(fields))
-fields = arcpy.ListFields('FEMA_Modeled_Building_Damage_Assessments_harvey_20170829')
-print(len(fields))
