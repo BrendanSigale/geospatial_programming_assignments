@@ -1,1 +1,10 @@
 *.ini
+*.gdbtable
+*.horizon
+*.gdbindexes
+*.gdbtablx
+*.spx
+*.nds
+*.cpg
+*.atx
+*.freelist
