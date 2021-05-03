@@ -1,10 +1,14 @@
 *.ini
-*.gdbtable
-*.horizon
-*.gdbindexes
-*.gdbtablx
-*.spx
-*.nds
-*.cpg
-*.atx
-*.freelist
+*.csv
+/Assignment 3
+/Assignment 4
+/Assignment 5
+/Assignment 6
+/Assignment 7
+/Final Project
+/Project 1
+/Project 2
+/Project 3
+/Project 4 - Raster Analysis
+/Project 5 - Network Analysis
+/Quizzes
