@@ -9,7 +9,7 @@
 #     - Create new database in defined workspace.
 #     - Check input feature data types.
 #     - Reproject any unmatching feature classes to that of the roads input.
-#     - Clip point data into the polygon input boundaries.
+#     - Clip point data into the polygon feature class boundaries.
 #     - Centroids are calculated for the input polygons to estimate distance to roads.
 #     - Intersect analysis is performed between roads and evac inputs to estimate evacuation route access points.
 #     - Distance between polygon centroids and the nearest intersection is calculated.
@@ -72,11 +72,10 @@ def evacuationAccessibilityandPSVI(svi, evac, roads, hwm, workspace, joinField, 
     else:
         print("Input feature class types accepted.")
 
-    ## Ensure projections all match, using roads as the defining piece. Will convert SVI to WGS-84 at the end for
-    ## for compatability with Geographic Visualization project.
+    ## Ensure projections all match, using roads as the defining piece.
 
     if roads_desc_name != svi_desc_name:
-        print("Roads and Evac do not match, updating svi in svi_reprojected to match roads: " + roads_desc_name)
+        print("Roads and SVI do not match, updating svi in svi_reprojected to match roads: " + roads_desc_name)
         arcpy.management.Project(svi, 'svi_reprojected', roads_desc.spatialReference)
         svi = arcpy.env.workspace + '/svi_reprojected'
         print("Projection updated, both svi and roads are projected in: " + roads_desc_name)
@@ -102,6 +101,7 @@ def evacuationAccessibilityandPSVI(svi, evac, roads, hwm, workspace, joinField, 
     ## clip high water marks to be within possible svi regions (Must be done first, as the svi is clipped after using these points)
     arcpy.analysis.Clip(hwm, svi, hwm_clip)
     print("Points clipped successfully.")
+
 
     ## Convert census block groups to centroids for point to point distance analysis.
     arcpy.management.FeatureToPoint(svi, svi_cent, "CENTROID")
