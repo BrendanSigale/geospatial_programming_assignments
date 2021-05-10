@@ -19,17 +19,31 @@ def hawkid():
 #        
 ###################################################################### 
 def calculateDistanceFromPointsToPolylines(input_geodatabase, fcPoint, fcPolyline):
+
+    import arcpy
+    import sys
+
+
     try:
         ## update workspace
         arcpy.env.workspace = input_geodatabase
-        
-        ##perform near analysis
-        arcpy.analysis.Near(fcPoint, fcPolyline, field_names = ['NEAR_DIST'])
-
     except:
-        # By default any other errors will be caught here
-        e = sys.exc_info()[1]
-        print(e.args[0])
+        raise NameError('Input Geodatabase does not exist.')
+    
+    arcpy.env.overwriteOutput = True
+
+
+    fcPoint_desc = arcpy.Describe(fcPoint)
+    fcPolyline_desc = arcpy.Descibre(fcPolyline)
+
+    if fcPoint_desc.shapeType != 'Point':
+            raise TypeError('fcPoint must be points!')
+    if fcPolyline_desc.shapeType != 'Polyline':
+        raise TypeError('fcPolyline must be a polyline!')
+    
+    ##perform near analysis
+    arcpy.analysis.Near(fcPoint, fcPolyline, method = 'GEODESIC', field_names = ['NEAR_DIST'])
+
 ######################################################################
 # Problem 2 (30 points)
 # 
@@ -38,51 +52,67 @@ def calculateDistanceFromPointsToPolylines(input_geodatabase, fcPoint, fcPolylin
 #
 ######################################################################
 def countPointsByTypeWithinPolygon(input_geodatabase, fcPoint, pointFieldName, pointFieldValue, fcPolygon):
+    
+    import arcpy
+    import sys
+
+    outFc = 'count_points'
+    countTable = 'counted_facilities'
+
     try:
         arcpy.env.workspace = input_geodatabase
-        
-        ## add the new column
-        newColumnName = "objects_in_polygon"
-        arcpy.AddField_management(fcPolygon, newColumnName, 'FLOAT')
-        
-        ## selects polygons where field name matches input
-        expression = arcpy.AddFieldDelimiters(arcpy.env.workspace, pointFieldName) + " = '" + str(pointFieldValue) + "'"
-        outPoints = fcPoint + "_filtered"
-        arcpy.FeatureClassToFeatureClass_conversion(fcPoint, arcpy.env.workspace, outPoints, expression)
-        
-        ## new feature class which contains information on which polygon a point is in
-        arcpy.SpatialJoin_analysis(fcPolygon, fcPoint, outFc, '#', '#', '#', 'CONTAINS')
-        
-        ## new table with summarized information, grouped by FIPS, for further analysis - note: Function needs FIPS. Change for different object identified
-        arcpy.Statistics_analysis(outFc, countTable, 'Join_Count SUM', 'FIPS')
-    
-        ## assembles counts into a dictionary
-        countDict = {}
-        with arcpy.da.SearchCursor(countTable, ["FIPS", 'SUM_Join_Count']) as cursor:
-            for row in cursor:
-                fips = row[0]
-                if fips in countDict.keys():
-                    countDict[fips] += row[1]
-                else:
-                    countDict[fips] = row[1]
-            del row
-        del cursor
-        
-        ## matches based on FIPS, updates newColumnName
-        with arcpy.da.UpdateCursor(fcPolygon, ['FIPS', newColumnName]) as cursor:
-            for row in cursor:
-                if row[0] in countDict.keys():
-                    row[1] = countDict[row[0]]
-                else:
-                    row[1] = 0
-                cursor.updateRow(row)
-            del row
-        del cursor
-    
     except:
-        # By default any other errors will be caught here
-        e = sys.exc_info()[1]
-        print(e.args[0])
+        raise NameError('Input Geodatabase does not exist!')
+    
+    arcpy.env.overwriteOutput = True
+
+    fcPoint_desc = arcpy.Describe(fcPoint)
+    fcPolygon_desc = arcpy.Describe(fcPolygon)
+
+    if fcPoint_desc.shapeType != 'Point':
+            raise TypeError('fcPoint must be points!')
+    if fcPolygon_desc.shapeType != 'Polygon':
+        raise TypeError('fcPolygon must be a polygon!')
+        
+    ## add the new column
+    newColumnName = "objects_in_polygon"
+    arcpy.AddField_management(fcPolygon, newColumnName, 'FLOAT')
+    
+    ## selects polygons where field name matches input
+    expression = arcpy.AddFieldDelimiters(arcpy.env.workspace, pointFieldName) + " = '" + str(pointFieldValue) + "'"
+    outPoints = fcPoint + "_filtered"
+    arcpy.FeatureClassToFeatureClass_conversion(fcPoint, arcpy.env.workspace, outPoints, expression)
+    
+    ## new feature class which contains information on which polygon a point is in
+    arcpy.SpatialJoin_analysis(fcPolygon, fcPoint, outFc, '#', '#', '#', 'CONTAINS')
+    
+    ## new table with summarized information, grouped by FIPS, for further analysis - note: Function needs FIPS. Change for different object identified
+    arcpy.Statistics_analysis(outFc, countTable, 'Join_Count SUM', 'FIPS')
+
+    ## assembles counts into a dictionary
+    countDict = {}
+    with arcpy.da.SearchCursor(countTable, ["FIPS", 'SUM_Join_Count']) as cursor:
+        for row in cursor:
+            fips = row[0]
+            if fips in countDict.keys():
+                countDict[fips] += row[1]
+            else:
+                countDict[fips] = row[1]
+        del row
+    del cursor
+    
+    ## matches based on FIPS, updates newColumnName
+    with arcpy.da.UpdateCursor(fcPolygon, ['FIPS', newColumnName]) as cursor:
+        for row in cursor:
+            if row[0] in countDict.keys():
+                row[1] = countDict[row[0]]
+            else:
+                row[1] = 0
+            cursor.updateRow(row)
+        del row
+    del cursor
+
+    arcpy.Delete_management(outFc)
 
 ######################################################################
 # Problem 3 (50 points)
@@ -125,88 +155,96 @@ def countPointsByTypeWithinPolygon(input_geodatabase, fcPoint, pointFieldName, p
 #    e) Delete uncessary files and the fields that you generated through the process, including the spatial join outputs.  
 ######################################################################
 def countCategoricalPointTypesWithinPolygons(fcPoint, pointFieldName, fcPolygon, workspace):
+    
+    import arcpy
+    import sys
+    
     try:
-        ## updates the workspace
         arcpy.env.workspace = workspace
-        
-        ## gets unique values of the provided fields
-        fc_search = fcPoint
-        fields = [pointFieldName]
-        uniqueNames = []
-
-        search_cursor = arcpy.da.SearchCursor(fc_search, fields)
-
-        for row in search_cursor:
-            if row[0] not in uniqueNames:
-                uniqueNames.append(row[0])
-            else:
-                pass
-        print(uniqueNames)
-
-        ## creates temporary feature classes for analysis
-        outFc = 'facilities_in_cbg'
-        countTable = 'counts'
-        outPoints = fcPoint + "_filtered"
-
-        ## begins analysis loop through each value and for each column
-        for name in range(len(uniqueNames)):
-            ##creates new columns based on uniqueNames
-            inputName = uniqueNames[name].replace(" ", "_").lower()
-            newColumnName = inputName + "_in_fcpolygon"
-            arcpy.AddField_management(fcPolygon, newColumnName, 'FLOAT')
-
-            print("column " + newColumnName + " created")
-
-            ## selects polygons where field name matches input
-            expression = arcpy.AddFieldDelimiters(arcpy.env.workspace, pointFieldName) + " = '" + str(uniqueNames[name]) + "'"
-            outPoints = fcPoint + "_filtered"
-            arcpy.FeatureClassToFeatureClass_conversion(fcPoint, arcpy.env.workspace, outPoints, expression)
-
-            ## new feature class which contains information on which polygon a point is in
-            arcpy.SpatialJoin_analysis(fcPolygon, fcPoint, outFc, '#', '#', '#', 'CONTAINS')
-
-            print("spatial join complete")
-
-            ## new table with summarized information, grouped by FIPS, for further analysis - note: Function needs FIPS. Change for different object identified
-            arcpy.Statistics_analysis(outFc, countTable, 'Join_Count SUM', 'FIPS')
-
-            print("Statistic Analysis complete")
-
-            ## assembles counts into a dictionary
-            countDict = {}
-            with arcpy.da.SearchCursor(countTable, ["FIPS", 'SUM_Join_Count']) as cursor:
-                for row in cursor:
-                    fips = row[0]
-                    if fips in countDict.keys():
-                        countDict[fips] += row[1]
-                    else:
-                        countDict[fips] = row[1]
-                del row
-            del cursor
-
-            ## matches based on FIPS, updates newColumnName
-            with arcpy.da.UpdateCursor(fcPolygon, ['FIPS', newColumnName]) as cursor:
-                for row in cursor:
-                    if row[0] in countDict.keys():
-                        row[1] = countDict[row[0]]
-                    else:
-                        row[1] = 0
-                    print(row[1])
-                    cursor.updateRow(row)
-                del row
-            del cursor
-
-            ## deletes temporarily used feature classes
-            arcpy.management.DeleteFeatures(outFc)
-            arcpy.management.Delete(countTable)
-            arcpy.management.DeleteFeatures(outPoints)
-
-            print("Additional features deleted")
-            
     except:
-        # By default any other errors will be caught here
-        e = sys.exc_info()[1]
-        print(e.args[0])
+        raise NameError('Input Geodatabase does not exist!')
+
+    fcPoint_desc = arcpy.Describe(fcPoint)
+    fcPolygon_desc = arcpy.Describe(fcPolygon)
+
+    if fcPoint_desc.shapeType != 'Point':
+        raise TypeError('fcPoint must be points!')
+    if fcPolygon_desc.shapeType != 'Polygon':
+        raise TypeError('fcPolygon must be a polygon!')
+        
+    ## gets unique values of the provided fields
+    fc_search = fcPoint
+    fields = [pointFieldName]
+    uniqueNames = []
+
+    search_cursor = arcpy.da.SearchCursor(fc_search, fields)
+
+    for row in search_cursor:
+        if row[0] not in uniqueNames:
+            uniqueNames.append(row[0])
+        else:
+            pass
+    print(uniqueNames)
+
+    ## creates temporary feature classes for analysis
+    outFc = 'facilities_in_cbg'
+    countTable = 'counts'
+    outPoints = fcPoint + "_filtered"
+
+    ## begins analysis loop through each value and for each column
+    for name in range(len(uniqueNames)):
+        ##creates new columns based on uniqueNames
+        inputName = uniqueNames[name].replace(" ", "_").lower()
+        newColumnName = inputName + "_in_fcpolygon"
+        arcpy.AddField_management(fcPolygon, newColumnName, 'FLOAT')
+
+        print("column " + newColumnName + " created")
+
+        ## selects polygons where field name matches input
+        expression = arcpy.AddFieldDelimiters(arcpy.env.workspace, pointFieldName) + " = '" + str(uniqueNames[name]) + "'"
+        outPoints = fcPoint + "_filtered"
+        arcpy.FeatureClassToFeatureClass_conversion(fcPoint, arcpy.env.workspace, outPoints, expression)
+
+        ## new feature class which contains information on which polygon a point is in
+        arcpy.SpatialJoin_analysis(fcPolygon, fcPoint, outFc, '#', '#', '#', 'CONTAINS')
+
+        print("Spatial join complete")
+
+        ## new table with summarized information, grouped by FIPS, for further analysis - note: Function needs FIPS. Change for different object identified
+        arcpy.Statistics_analysis(outFc, countTable, 'Join_Count SUM', 'FIPS')
+
+        print("Statistic Analysis complete")
+
+        ## assembles counts into a dictionary
+        countDict = {}
+        with arcpy.da.SearchCursor(countTable, ["FIPS", 'SUM_Join_Count']) as cursor:
+            for row in cursor:
+                fips = row[0]
+                if fips in countDict.keys():
+                    countDict[fips] += row[1]
+                else:
+                    countDict[fips] = row[1]
+            del row
+        del cursor
+
+        ## matches based on FIPS, updates newColumnName
+        with arcpy.da.UpdateCursor(fcPolygon, ['FIPS', newColumnName]) as cursor:
+            for row in cursor:
+                if row[0] in countDict.keys():
+                    row[1] = countDict[row[0]]
+                else:
+                    row[1] = 0
+                print(row[1])
+                cursor.updateRow(row)
+            del row
+        del cursor
+
+        ## deletes temporarily used feature classes
+        arcpy.management.DeleteFeatures(outFc)
+        arcpy.management.Delete(countTable)
+        arcpy.management.DeleteFeatures(outPoints)
+
+        print("Additional features deleted")
 
 ######################################################################
 # MAKE NO CHANGES BEYOND THIS POINT.

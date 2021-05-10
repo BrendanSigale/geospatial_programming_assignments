@@ -31,7 +31,7 @@ def hawkid():
 ######################################################################
 def calculateDensity(fcpolygon, attribute, geodatabase = "assignment2.gdb"):
     ## overwrite enabled, update gdb
-    arcpy.arcpy.env.overwriteOutput = True
+    arcpy.env.overwriteOutput = True
     arcpy.env.workspace = folder + geodatabase
     print("overwrite enabled and gdb updated")
 
@@ -84,7 +84,7 @@ def calculateDensity(fcpolygon, attribute, geodatabase = "assignment2.gdb"):
 ######################################################################
 def estimateTotalLineLengthInPolygons(fcLine, fcClipPolygon, polygonIDFieldName, clipPolygonID, geodatabase = "assignment2.gdb"):
     ## overwrite enabled, update gdb
-    arcpy.arcpy.env.overwriteOutput = True
+    arcpy.env.overwriteOutput = True
     arcpy.env.workspace = folder + geodatabase
     print("overwrite enabled and gdb updated")
 

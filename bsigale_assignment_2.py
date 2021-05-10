@@ -95,9 +95,6 @@ def import_data(filename):
     #    return the MAIN list.
     ######################
    
-
-
-
     fo = open(filename, 'r')
     data = fo.read()
     fo.close()   
@@ -111,9 +108,6 @@ def import_data(filename):
         participants.append(row)
     
     return participants
-
-
-
 
 def attack_multiplier(attacker_type, defender_type):
     """
@@ -154,20 +148,15 @@ def attack_multiplier(attacker_type, defender_type):
     # 6. Else, return 1.0
     ######################
     
-    
-    
-    
     attacker_type = attacker_type.lower()
     defender_type = defender_type.lower()
     
     if attacker_type == 'water' and defender_type =='fire': return 2.5
     elif attacker_type == 'electric' and defender_type =='water': return 1.3
-    elif attacker_type == 'ground' and defender_type =='electric': return 1.3
+    elif attacker_type == 'ground' and defender_type =='electric': return 2.0
     elif attacker_type == 'fire' and defender_type =='grass': return 3.0
     elif attacker_type == 'grass' and defender_type =='water': return 1.5
     else: return 1.0
-
-
 
 
 def fight(participant1, participant2, first2attack):
@@ -256,6 +245,11 @@ def fight(participant1, participant2, first2attack):
             damage2 = participant2[3] * mult2
             hp1 -= damage2
         rounds += 1
+        
+        if first2attack == 1:
+            first2attack = 0
+        else:
+            first2attack = 1
     
     if hp1 > 0:
         winner = 1
@@ -323,7 +317,8 @@ def tournament(participants):
     
     
     
-     wins = [0] * len(participants)
+    wins = [0] * len(participants)
+    fights = []
     
     for i in range(len(wins)):
         for j in range(len(wins)):
@@ -331,9 +326,14 @@ def tournament(participants):
             if i == j:
                 pass
             
+            if [i,j] in fights or [j,i] in fights:
+                pass
+            
+            fights.append([i, j])
+            
             home = fight(participants[i], participants[j], 1)
             away = fight(participants[i], participants[j], 2)
-
+            
             if home[0] == 1: wins[i] += 1
             if home[0] == 2: wins[j] += 1
 

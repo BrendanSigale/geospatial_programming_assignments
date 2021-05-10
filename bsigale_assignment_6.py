@@ -21,6 +21,12 @@ def hawkid():
 # geodatabase: The workspace geodatabase
 ######################################################################
 def importCSVIntoGeodatabase(csvFile, geodatabase):
+    
+    import arcpy
+    import sys
+    
+    arcpy.env.overwriteOutput = True
+
     outTable = 'csvImport'
     try:
         arcpy.env.workspace = geodatabase
@@ -66,20 +72,28 @@ def importCSVIntoGeodatabase(csvFile, geodatabase):
 #    after successful clipping. 
 #################################################################################################################### 
 def krigingFromPointCSV(inTable, valueField, xField, yField, inClipFc, workspace = "assignment3.gdb"):
-    ##update GDB and enable overwrite
-    arcpy.env.workspace = workspace
-    arcpy.arcpy.env.overwriteOutput = True
+    
+    import arcpy
+    import sys
+
+    try:
+        ## update workspace
+        arcpy.env.workspace = workspace
+    except:
+        raise NameError('Input Geodatabase does not exist.')
+    
+    arcpy.env.overwriteOutput = True
     
     ## Create variables used throughout the function
     outTable = 'csvImport'
     outFc = 'tableAsFc' ## Points as feature class layer name
     outProject = 'pointsToClipConversion' ## Reprojected points if necessary
-    krigName = 'kriging_based_on_' + valueField ## Kriging name
+    krigName = 'K' + valueField ## Kriging name
     clipFc = 'imported_clipping_fc' ## Clipping feature class imported to the gdb
     inputFcClip = 'input_fc_clipped' ## Clipped kriging map
     inputFcClipInt = inputFcClip + '_int' ## Integer clipping kriging map
-    outKiriging = 'kriging_classified' 
-    finalOutput = 'rasterized_kriging_based_on_' + valueField + "_and_" + inClipFc ## Final output layer
+    outKiriging = 'KClass' 
+    finalOutput = 'R_' + valueField ## Final output layer
     
     ## Input the inTable
     importCSVIntoGeodatabase(inTable, workspace)
@@ -102,71 +116,62 @@ def krigingFromPointCSV(inTable, valueField, xField, yField, inClipFc, workspace
         
     ## Check to make sure Spatial Analyst license is available, raise error if not
     try:
-        if arcpy.CheckExtension("Spatial") == 'Available':
-            arcpy.CheckOutExtension("Spatial")
-        else:
-            raise LicenseError
-    except LicenseError:
-        print("Spatial Analyst License is not available")
+        arcpy.CheckExtension("Spatial") == 'Available'
+        arcpy.CheckOutExtension("Spatial")
+    except LicenseError("Spatial Analyst License is not available")
     
-    try:
-        ## Calculate cell size for Kriging
-        descTable = arcpy.Describe(outFc)
-        width = descTable.extent.width
-        height = descTable.extent.height
-        cellSize = min(width, height) / 1000
+    ## Calculate cell size for Kriging
+    descTable = arcpy.Describe(outFc)
+    width = descTable.extent.width
+    height = descTable.extent.height
+    cellSize = min(width, height) / 1000
 
-        ## Generate kriging layer
-        outKriging = Kriging(outFc, valueField, '#', cellSize)
-        outKriging.save(krigName)
+    ## Generate kriging layer
+    outKriging = Kriging(outFc, valueField, '#', cellSize)
+    outKriging.save(krigName)
 
-        ## Generate clipping extent
-        descClip = arcpy.Describe(clipFc)
-        rectangle = str(descClip.extent.XMin) + " " + str(descClip.extent.YMin) + " " + str(descClip.extent.XMax) + " " + str(descClip.extent.YMax)
+    ## Generate clipping extent
+    descClip = arcpy.Describe(clipFc)
+    rectangle = str(descClip.extent.XMin) + " " + str(descClip.extent.YMin) + " " + str(descClip.extent.XMax) + " " + str(descClip.extent.YMax)
 
-        ## Create clipped kriging map
-        arcpy.Clip_management(krigName, rectangle, inputFcClip, clipFc, '#', 'ClippingGeometry', 'MAINTAIN_EXTENT')
+    ## Create clipped kriging map
+    arcpy.Clip_management(krigName, rectangle, inputFcClip, clipFc, '#', 'ClippingGeometry', 'MAINTAIN_EXTENT')
 
-        ## Convert clipping kriging map to integer values for classification
-        outInt = Int(inputFcClip)
-        outInt.save(inputFcClipInt)
+    ## Convert clipping kriging map to integer values for classification
+    outInt = Int(inputFcClip)
+    outInt.save(inputFcClipInt)
 
-        ## Variables for establishing equal interval values (assumes 5 classes, can be changed using numofClasses variable)
-        min_int = int(arcpy.management.GetRasterProperties(outInt, "MINIMUM").getOutput(0))
-        max_int = int(arcpy.management.GetRasterProperties(outInt, "MAXIMUM").getOutput(0))
-        numofClasses = 5
-        eqInterval = (max_int - min_int) / numofClasses
-        myremapRange = []
-        myBreak = min_int
+    ## Variables for establishing equal interval values (assumes 5 classes, can be changed using numofClasses variable)
+    min_int = int(arcpy.management.GetRasterProperties(outInt, "MINIMUM").getOutput(0))
+    max_int = int(arcpy.management.GetRasterProperties(outInt, "MAXIMUM").getOutput(0))
+    numofClasses = 5
+    eqInterval = (max_int - min_int) / numofClasses
+    myremapRange = []
+    myBreak = min_int
 
-        ## Generate equal interval ranges
-        for i in range(0, numofClasses):
-            classCode = i + 1
-            lowerBound = myBreak
-            upperBound = myBreak + eqInterval
-            remap = [lowerBound, upperBound, classCode]
-            myremapRange.append(remap)
-            myBreak += eqInterval
+    ## Generate equal interval ranges
+    for i in range(0, numofClasses):
+        classCode = i + 1
+        lowerBound = myBreak
+        upperBound = myBreak + eqInterval
+        remap = [lowerBound, upperBound, classCode]
+        myremapRange.append(remap)
+        myBreak += eqInterval
 
-        ## Classified based on Integer kriging values
-        outReclassRR = Reclassify(inputFcClipInt, "Value", RemapRange(myremapRange), "NODATA")
-        outReclassRR.save("kriging_classified_output")
+    ## Classified based on Integer kriging values
+    outReclassRR = Reclassify(inputFcClipInt, "Value", RemapRange(myremapRange), "NODATA")
+    outReclassRR.save("krig_c_out")
 
-        ## Save classified raster as polygon for final output
-        arcpy.RasterToPolygon_conversion(outReclassRR, finalOutput, "NO_SIMPLIFY", "Value")
+    ## Save classified raster as polygon for final output
+    arcpy.RasterToPolygon_conversion(outReclassRR, finalOutput, "NO_SIMPLIFY", "Value")
 
-        ## Delete extra feature classes and layers which were generated
-        arcpy.management.Delete(outFc)
-        arcpy.management.Delete(clipFc)
-        arcpy.management.Delete(outKriging)
-        arcpy.management.Delete(outInt)
-        arcpy.management.Delete(inputFcClip)
-        arcpy.management.Delete(outReclassRR)
-
-    except:
-        # By default any other errors will be caught here
-        e = sys.exc_info()[1]
-        print(e.args[0])
+    ## Delete extra feature classes and layers which were generated
+    arcpy.management.Delete(outFc)
+    arcpy.management.Delete(clipFc)
+    arcpy.management.Delete(outKriging)
+    arcpy.management.Delete(outInt)
+    arcpy.management.Delete(inputFcClip)
+    arcpy.management.Delete(outReclassRR)
 
 ######################################################################
 # MAKE NO CHANGES BEYOND THIS POINT.

@@ -25,6 +25,8 @@ def printFeatureClassNames(workspace):
     try:
         arcpy.env.workspace = workspace
         ## get list of feature classes in the workspace.
+    arcpy.env.overwriteOutput = True
+
 	fcList = arcpy.ListFeatureClasses()
 	## loop through the feature classes in fcList, describe the object, and print the shapetype
 	## using .format for ease of use.
@@ -54,7 +56,12 @@ def printNumericalFieldNames(inputFc, workspace):
     try:
         ## updates the workspace to the workspace given by the user
         arcpy.env.workspace = workspace
+    except:
+        raise NameError('Input workspace does not exist!')
+    
+    arcpy.env.overwriteOutput = True
 
+    try:
         ## lists fields for the user-specified feature class in the workspace.
         fieldlist = arcpy.ListFields(inputFc)
 
@@ -81,6 +88,9 @@ def printNumericalFieldNames(inputFc, workspace):
 
 ###################################################################### 
 def exportFeatureClassesByShapeType(input_geodatabase, shapeType, output_geodatabase):
+    
+    arcpy.env.overwriteOutput = True
+
     try:
         ##store the current environment so it can be reset later
         original_env = str(arcpy.env.workspace)
@@ -133,7 +143,12 @@ def exportAttributeJoin(inputFc, idFieldInputFc, inputTable, idFieldTable, works
     try:
         ## updates the workspace to the workspace given by the user
         arcpy.env.workspace = workspace
+    except:
+        raise NameError('Input workspace does not exist!')
+    
+    arcpy.env.overwriteOutput = True
 
+    try:
         ##sets the output table name.
         outName = inputFc + "_" + inputTable + "_JoinOn_" + idFieldInputFc
 

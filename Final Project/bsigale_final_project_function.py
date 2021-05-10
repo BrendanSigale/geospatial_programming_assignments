@@ -38,6 +38,9 @@ def evacuationAccessibilityandPSVI(svi, evac, roads, hwm, workspace, joinField, 
     # will be created, the user should use Arc's FeatureClasstoFeatureClass tool to remove unwanted columns. Once this is complete,
     # copy the program's field mappings from the results pane into a fieldmappings string, which can then be passed into the function.
 
+    import arcpy
+    import os
+
     ## intialize useful variables names
     svi_cent = 'svi_centroids'
     intersect = 'intersection_points'

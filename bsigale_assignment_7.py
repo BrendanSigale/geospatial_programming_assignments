@@ -48,10 +48,17 @@ def hawkid():
 #       "TRAVEL_FROM", "DETAILED_POLYS", "MERGE"
 #################################################################################################################### 
 def calculateNetworkServiceArea(inFacilities, roads, workspace):
-    ##Create new gdb
-    arcpy.CreateFileGDB_management(workspace, 'serviceArea.gdb')
-    arcpy.env.workspace = 'serviceArea.gdb'
+    import arcpy
+    import sys
 
+    arcpy.env.overwriteOutput = True
+
+    try:
+        ##Create new gdb
+        arcpy.CreateFileGDB_management(workspace, 'serviceArea.gdb')
+        arcpy.env.workspace = 'serviceArea.gdb'
+    except:
+        raise NameError('Input workspace does not exist!')
     try:
         arcpy.CheckOutExtension("network")
     except:
